@@ -54,7 +54,6 @@ func (h *Handler) set(size int) error {
 	expired := int64(-1)
 
 	for i := 3; i < size; i++ {
-		fmt.Println("foobar", i, size)
 		k, err := h.readBulkString()
 		if err != nil {
 			return fmt.Errorf("read 2nd args: %w", err)

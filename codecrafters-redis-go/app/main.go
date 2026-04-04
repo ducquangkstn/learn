@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"net"
-	"os"
 
 	"go.uber.org/zap"
 
@@ -22,7 +20,12 @@ func main() {
 	if err != nil {
 		zap.L().Fatal("failed to listen to port", zap.Error(err))
 	}
-	defer l.Close()
+	defer func() {
+		cErr := l.Close()
+		if cErr != nil {
+			zap.L().Error("failed to close listener", zap.Error(cErr))
+		}
+	}()
 
 	zap.L().Info("start listening")
 	s := server.NewServer()
@@ -30,8 +33,7 @@ func main() {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
+			zap.L().Error("failed to accept connection", zap.Error(err))
 		}
 
 		h := server.NewHandler(conn, s)

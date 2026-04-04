@@ -42,7 +42,12 @@ func NewHandler(conn net.Conn, server *Server) *Handler {
 }
 
 func (h *Handler) ListenAndServe() {
-	defer h.conn.Close()
+	defer func() {
+		cErr := h.conn.Close()
+		if cErr != nil {
+			zap.L().Error("failed to close connection", zap.Error(cErr))
+		}
+	}()
 	for {
 		err := h.serve()
 		switch {
