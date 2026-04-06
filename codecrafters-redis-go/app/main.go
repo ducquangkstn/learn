@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)

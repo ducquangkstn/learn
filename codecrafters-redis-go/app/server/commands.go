@@ -3,7 +3,10 @@ package server
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func (h *Handler) ping(size int) error {
@@ -26,10 +29,7 @@ func (h *Handler) echo(size int) error {
 	if err != nil {
 		return fmt.Errorf("readBulkString: %w", err)
 	}
-	data, err := makeBulkString(msg)
-	if err != nil {
-		return fmt.Errorf("makeBulkString: %w", err)
-	}
+	data := makeBulkString(msg)
 	_, err = h.conn.Write(data)
 	if err != nil {
 		return fmt.Errorf("conn.Write: %w", err)
@@ -54,6 +54,7 @@ func (h *Handler) set(size int) error {
 	expired := int64(-1)
 
 	for i := 3; i < size; i++ {
+		fmt.Println("foobar", i, size)
 		k, err := h.readBulkString()
 		if err != nil {
 			return fmt.Errorf("read 2nd args: %w", err)
@@ -108,10 +109,27 @@ func (h *Handler) get(size int) error {
 		return nil
 	}
 
-	data, err := makeBulkString(t2)
+	data := makeBulkString(t2)
+	_, err = h.conn.Write(data)
 	if err != nil {
-		return fmt.Errorf("makeBulkString: %w", err)
+		return fmt.Errorf("conn.Write: %w", err)
 	}
+	return nil
+}
+
+func (h *Handler) getType(size int) error {
+	if size != 2 {
+		return fmt.Errorf("unexpected size: %d", size)
+	}
+	t1, err := h.readBulkString()
+	if err != nil {
+		return fmt.Errorf("read 1st args: %w", err)
+	}
+	zap.L().Info("type command", zap.String("key", t1))
+	re := h.server.getType(t1)
+
+	data := makeSimpleString(strings.ToLower(re.String()))
+	zap.L().Info("resp type command:", zap.String("resp", string(data)))
 	_, err = h.conn.Write(data)
 	if err != nil {
 		return fmt.Errorf("conn.Write: %w", err)

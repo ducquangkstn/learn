@@ -36,6 +36,7 @@ func NewHandler(conn net.Conn, server *Server) *Handler {
 		"echo": {handle: h.echo},
 		"get":  {handle: h.get},
 		"set":  {handle: h.set},
+		"type": {handle: h.getType},
 	}
 
 	return h
@@ -108,7 +109,7 @@ func (h *Handler) nextToken() ([]byte, error) {
 
 		out := slices.Clone(h.tmp[:re])
 		h.tmp = slices.Clone(h.tmp[re+2:])
-		zap.L().Info("next token", zap.String("token", string(out)), zap.String("remaining", string(h.tmp)))
+		zap.L().Debug("next token", zap.String("token", string(out)), zap.String("remaining", string(h.tmp)))
 		return out, nil
 	}
 }
@@ -146,15 +147,18 @@ func (h *Handler) readBulkString() (string, error) {
 	return string(t2), nil
 }
 
-func makeBulkString(input string) ([]byte, error) {
+func makeBulkString(input string) []byte {
 	data := []byte(input)
 
 	var re []byte
 	re = append(re, '$')
-	re = append(re, []byte(strconv.Itoa(len(data)))...)
-	re = append(re, '\r', '\n')
+	re = fmt.Append(re, len(data))
+	re = fmt.Append(re, "\r\n")
 	re = append(re, data...)
-	re = append(re, '\r', '\n')
+	re = fmt.Append(re, "\r\n")
+	return re
+}
 
-	return re, nil
+func makeSimpleString(input string) []byte {
+	return []byte(fmt.Sprint("+", input, "\r\n"))
 }

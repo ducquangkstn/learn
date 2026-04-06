@@ -5,7 +5,16 @@ import (
 	"time"
 )
 
+//go:generate stringer -type=ValueType --trimprefix ValueType
+type ValueType int
+
+const (
+	ValueTypeNone ValueType = iota
+	ValueTypeString
+)
+
 type Value struct {
+	Type    ValueType
 	V       string
 	expired int64
 }
@@ -28,6 +37,7 @@ func (s *Server) setWithExpired(k string, v string, expireDur time.Duration) {
 	}
 	s.dataMu.Lock()
 	s.data[k] = Value{
+		Type:    ValueTypeString,
 		V:       v,
 		expired: expiredTimestamp,
 	}
@@ -46,4 +56,18 @@ func (s *Server) get(k string) (string, bool) {
 		return "", false
 	}
 	return v.V, true
+}
+
+func (s *Server) getType(k string) ValueType {
+	currentTimestamp := time.Now().UnixNano()
+	s.dataMu.RLock()
+	v, ok := s.data[k]
+	s.dataMu.RUnlock()
+	if !ok {
+		return ValueTypeNone
+	}
+	if v.expired < currentTimestamp && v.expired != -1 {
+		return ValueTypeNone
+	}
+	return v.Type
 }
