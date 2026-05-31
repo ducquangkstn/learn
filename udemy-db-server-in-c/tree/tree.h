@@ -12,6 +12,14 @@
 #define TagNode 2
 #define TagLeaf 4
 
+#define NoErr 0
+
+
+#define find_last(x) find_last_linear(x)
+#define return_err(x) \
+  errno = (x); \
+  return NULL
+
 typedef unsigned int  int32;
 typedef unsigned short int int16;
 typedef unsigned char int8;
@@ -23,7 +31,7 @@ struct s_node {
   struct s_node* west;
   struct s_leaf* east;
 
-  int8 path[256];
+  char path[256];
 
 };
 
@@ -34,9 +42,9 @@ struct s_leaf {
   union u_tree* west;
   struct s_leaf* east;
 
-  int8 key[128];
-  int8* value;
-  int16 size; // size of value
+  char key[128];
+  char* value;
+  size_t size; // size of value
 };
 
 typedef struct s_leaf Leaf;
