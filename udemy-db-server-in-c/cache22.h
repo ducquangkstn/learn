@@ -20,7 +20,7 @@
 #define HOST "127.0.0.1"
 #define PORT "8080"
 
-typedef unsigned int unit32;
+typedef unsigned int uint32;
 typedef unsigned short int uint16;
 
 typedef struct s_conn_handle {
@@ -28,6 +28,15 @@ typedef struct s_conn_handle {
   uint16 port;
   char ip[16];
 } Conn_handle;
+
+typedef uint32(*Callback) (Conn_handle* self, char* path, char* args);
+typedef struct s_cmdhandler {
+  char* cmd;
+  Callback handler;
+} CmdHandler;
+
+Callback get_cmd(char* cmd);
+
 
 void child_loop(Conn_handle* self);
 void main_loop(int server_fd);
