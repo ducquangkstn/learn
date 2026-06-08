@@ -6,6 +6,43 @@
 bool s_continuation = true;
 bool c_continuation = true;
 
+
+int main(int argc, char* argv[]) {
+  char* port_str;
+  if (argc < 2)
+    port_str = PORT;
+  else
+    port_str = argv[1];
+
+  uint16 port = atoi(port_str);
+  int server_fd = init_server(port);
+
+  while (s_continuation)
+    main_loop(server_fd);
+
+  close(server_fd);
+  return 0;
+}
+
+uint32 handle_hello(Conn_handle* self, char* folder, char* args) {
+  dprintf(self->sock_fd, "hello '%s'", folder);
+  return 0;
+}
+
+CmdHandler handlers[] = {
+  {.cmd = "hello", handle_hello}
+};
+
+Callback get_cmd(char* cmd) {
+  size_t count = sizeof(handlers) / sizeof(CmdHandler);
+
+  for (int i = 0; i < count; i++)
+    if (strcmp(handlers[i].cmd, cmd) == 0)
+      return handlers[i].handler;
+  return NULL;
+}
+
+
 int init_server(uint16 port) {
   // AF_INET is IPv4 Internet protocl
   // SOCK_STREAM = tcp
@@ -84,7 +121,7 @@ done_parsing:
 void main_loop(int server_fd) {
 
   struct sockaddr_in cli;
-  unit32 cli_len = sizeof(cli);
+  uint32 cli_len = sizeof(cli);
 
   int sock_fd = accept(server_fd, (struct sockaddr*)&cli, &cli_len);
   if (sock_fd == -1) {
@@ -116,21 +153,4 @@ void main_loop(int server_fd) {
 
   free(handle);
   close(sock_fd);
-}
-
-int main(int argc, char* argv[]) {
-  char* port_str;
-  if (argc < 2)
-    port_str = PORT;
-  else
-    port_str = argv[1];
-
-  uint16 port = atoi(port_str);
-  int server_fd = init_server(port);
-
-  while (s_continuation)
-    main_loop(server_fd);
-
-  close(server_fd);
-  return 0;
 }
