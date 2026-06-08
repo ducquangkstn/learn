@@ -12,6 +12,15 @@ int init_server(uint16 port) {
   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
   assert(server_fd);
 
+  // Forcefully attaching socket to the port 8080
+  int opt = 1;
+  if (setsockopt(server_fd, SOL_SOCKET,
+    SO_REUSEADDR | SO_REUSEPORT, &opt,
+    sizeof(opt))) {
+    assert_perror(errno);
+  }
+
+
   struct sockaddr_in sock = {
     .sin_family = AF_INET,
     .sin_port = htons(port),
@@ -31,9 +40,53 @@ int init_server(uint16 port) {
   return server_fd;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
 void child_loop(Conn_handle* self) {
-  sleep(1);
+  char buf[256];
+  memset(buf, 0, 256);
+
+  read(self->sock_fd, buf, 255); // last byte will always be 0
+
+  uint16 n = strlen(buf);
+  if (n > 255) n = 255;
+
+  char cmd[256], folder[256], args[256];
+  memset(cmd, 0, 256);  memset(folder, 0, 256);memset(args, 0, 256);
+
+  char* p = buf;
+  for (;(*p) && (*p != '\n') && (*p != '\r') && (*p != ' ');p++);
+  if (*p == 0) {
+    strncpy(cmd, buf, 255);
+    goto done_parsing;
+  }
+  *p = 0; // trick: set the space into \0, so that strncopy will stop there.
+  strncpy(cmd, buf, 255);
+
+  char* tmp = ++p;
+  for (;(*p) && (*p != '\n') && (*p != '\r') && (*p != ' ');p++);
+
+  if (*p == 0) {
+    strncpy(folder, tmp, 255);
+    goto done_parsing;
+  }
+  *p = 0;
+  strncpy(folder, tmp, 255);
+
+  tmp = ++p;
+  for (;(*p) && (*p != '\n') && (*p != '\r');p++);
+  if ((*p == '\r') || (*p == '\n')) *p = 0;
+  strncpy(args, tmp, 255);
+
+
+done_parsing:
+  dprintf(self->sock_fd, "cmd:\t%s\n", cmd);
+  dprintf(self->sock_fd, "folder:\t%s\n", folder);
+  dprintf(self->sock_fd, "args:\t'%s'\n", args);
+  return;
 }
+#pragma GCC diagnostic pop
+
 
 void main_loop(int server_fd) {
 
