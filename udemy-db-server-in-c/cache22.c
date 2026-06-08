@@ -44,34 +44,27 @@ int init_server(uint16 port) {
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
 void child_loop(Conn_handle* self) {
   char buf[256];
-  memset(buf, 0, 256);
+  memset(buf, 0, 256);// last byte will always be 0
 
-  read(self->sock_fd, buf, 255); // last byte will always be 0
-
-  uint16 n = strlen(buf);
-  if (n > 255) n = 255;
+  int re = read(self->sock_fd, buf, 255);
+  assert(re != -1 && re != 0); // TODO: what should we do if re == 0 (EOF)
 
   char cmd[256], folder[256], args[256];
   memset(cmd, 0, 256);  memset(folder, 0, 256);memset(args, 0, 256);
 
   char* p = buf;
   for (;(*p) && (*p != '\n') && (*p != '\r') && (*p != ' ');p++);
-  if (*p == 0) {
-    strncpy(cmd, buf, 255);
-    goto done_parsing;
-  }
+  bool finished = (*p == 0 || *p == '\n' || *p == '\r');
   *p = 0; // trick: set the space into \0, so that strncopy will stop there.
   strncpy(cmd, buf, 255);
+  if (finished) goto done_parsing;
 
   char* tmp = ++p;
   for (;(*p) && (*p != '\n') && (*p != '\r') && (*p != ' ');p++);
-
-  if (*p == 0) {
-    strncpy(folder, tmp, 255);
-    goto done_parsing;
-  }
+  finished = (*p == 0 || *p == '\n' || *p == '\r');
   *p = 0;
   strncpy(folder, tmp, 255);
+  if (finished) goto done_parsing;
 
   tmp = ++p;
   for (;(*p) && (*p != '\n') && (*p != '\r');p++);
