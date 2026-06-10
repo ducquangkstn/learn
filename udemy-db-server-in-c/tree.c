@@ -29,10 +29,12 @@ Node* create_node(Node* parent, char* path) {
 Leaf* find_last_linear(Node* parent) {
   assert(parent);
 
-  if (!parent->east)
+  if (!parent->east) {
     return_err(NoErr);
+  }
+
   Leaf* l;
-  for (l = parent->east; l != NULL;l = l->east);
+  for (l = parent->east; l -> east; l = l->east);
   assert(l);
 
   return l;
@@ -64,6 +66,51 @@ Leaf* create_leaf(Node* parent, char* key, char *value, size_t count) {
   return new;
 }
 
+// Warning: not thread-safe.
+char* indent(uint16 n) {
+  static char buf[256];
+  memset(buf, 0, 256);
+  assert(n < 127);
+  if (n < 0) n = 0;
+  char* p; int i;
+  for (i = 0, p = buf;i < n;p += 2, i++)
+    *p = *(p+1) = ' ';
+  return buf;
+}
+
+#define Print(x) \
+  memset(buf, 0, 256); \
+  strncpy(buf, (x), 255); \
+  size = strlen(buf); \
+  if (size) \
+    assert(write(fd, buf, size) != -1) \
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+void print_tree(Tree* root, int fd) {
+  int indentation = 0;
+  char buf[256];
+  uint16 size;
+
+  for (Node *n = (Node*)root; n; n = n->west) {
+    Print(indent(indentation++));
+    Print(n->path);
+    Print("\n");
+    for (Leaf* l = n->east; l; l = l->east) {
+      Print(indent(indentation));
+      Print(n->path);
+      Print("/");
+      Print(l->key);
+      Print(" -> '");
+      assert(write(fd, l->value, l->size) != -1);
+      Print("'\n");
+    }
+  }
+}
+#pragma GCC diagnostic pop
+
+
+
 int main() {
   printf("root: %p\n", &root);
 
@@ -79,16 +126,17 @@ int main() {
   Leaf* l1 = create_leaf(n2, key, value, size);
   assert(l1);
 
+  printf("create_leaf 1: %p - %p\n", l1, n2->east);
+
+  print_tree(&root, STDOUT_FILENO);
+
   key = "john";
   value = "dsrf342";
   size = strlen(value);
   Leaf* l2 = create_leaf(n2, key, value, size);
   assert(l2);
 
-  printf("%p %p\n", n, n2);
-  printf("%s\n", l1->value);
-  printf("%s\n", l2 -> key);
-
+  print_tree(&root, STDOUT_FILENO);
 
   free(n);
   free(n2);

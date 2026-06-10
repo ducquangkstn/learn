@@ -20,9 +20,8 @@
   errno = (x); \
   return NULL
 
-typedef unsigned int  int32;
-typedef unsigned short int int16;
-typedef unsigned char int8;
+typedef unsigned int  uint32;
+typedef unsigned short int uint16;
 typedef unsigned char Tag;
 
 struct s_node {
@@ -54,3 +53,10 @@ union u_tree {
   Leaf l;
 };
 typedef union u_tree Tree;
+
+Node* create_node(Node* parent, char* path);
+Leaf* find_last_linear(Node* parent);
+Leaf* create_leaf(Node* parent, char* key, char* value, size_t count);
+
+char* indent(uint16);
+void print_tree(Tree* self, int fd);
