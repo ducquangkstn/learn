@@ -16,6 +16,9 @@
 
 
 #define find_last(x) find_last_linear(x)
+#define lookup(x, y) lookup_linear(x, y)
+#define find_node(x) find_node_linear(x)
+
 #define return_err(x) \
   errno = (x); \
   return NULL
@@ -56,6 +59,8 @@ typedef union u_tree Tree;
 
 Node* create_node(Node* parent, char* path);
 Leaf* find_last_linear(Node* parent);
+Leaf* lookup_linear(char* path, char* key);
+Node* find_node_linear(char* path);
 Leaf* create_leaf(Node* parent, char* key, char* value, size_t count);
 
 char* indent(uint16);

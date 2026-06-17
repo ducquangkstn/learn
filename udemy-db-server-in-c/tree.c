@@ -26,6 +26,20 @@ Node* create_node(Node* parent, char* path) {
   return n;
 }
 
+Node* find_node_linear(char* path) {
+  for (Node* p = (Node*)&root; p; p = p->west)
+    if (strcmp(p->path, path) == 0)
+      return p;
+  return NULL;
+}
+
+Leaf* lookup_linear(char* path, char* key) {
+  Node* n= find_node(path);
+  if (!n)
+    return NULL;
+  return NULL;
+}
+
 Leaf* find_last_linear(Node* parent) {
   assert(parent);
 
@@ -126,9 +140,8 @@ int main() {
   Leaf* l1 = create_leaf(n2, key, value, size);
   assert(l1);
 
-  printf("create_leaf 1: %p - %p\n", l1, n2->east);
-
-  print_tree(&root, STDOUT_FILENO);
+  // printf("create_leaf 1: %p - %p\n", l1, n2->east);
+  // print_tree(&root, STDOUT_FILENO);
 
   key = "john";
   value = "dsrf342";
@@ -137,6 +150,7 @@ int main() {
   assert(l2);
 
   print_tree(&root, STDOUT_FILENO);
+  printf("find_node 1: %p (expected: %p) - %p\n", find_node("/Users/login"), n2, find_node("/Users/test"));
 
   free(n);
   free(n2);
