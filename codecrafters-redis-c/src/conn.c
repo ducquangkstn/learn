@@ -1,27 +1,28 @@
 /*
   TODO:
   - There is no error handling mode. Just use assert.
-  - For every new string, we reallocation every time. What we should do is allocating once, and re-read into the buffer.
+  - For every new string, we reallocation every time. What we should do is
+  allocating once, and re-read into the buffer.
   - Normalize command into lower case - DONE
   - Make debug log in different levels.
 */
 
+#include "conn.h"
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <ctype.h>
-#include "conn.h"
+#include <unistd.h>
 
 CmdHandler handlers[] = {
-  {.cmd = "ping",.callback = conn_callback_ping},
-  {.cmd = "echo",.callback = conn_callback_echo},
+    {.cmd = "ping", .callback = conn_callback_ping},
+    {.cmd = "echo", .callback = conn_callback_echo},
 
 };
 
-void* hanldeConn(void* args) {
+void* handleConn(void* args) {
   int socket_fd = *((int*)args);
   ConnHandle* handle = conn_handle_init(socket_fd);
   size_t cmd_count = sizeof(handlers) / sizeof(CmdHandler);
@@ -33,11 +34,11 @@ void* hanldeConn(void* args) {
     printf("argv_len cmd: %d\n", argv_len);
 
     char* cmd = conn_read_bulk_str(handle);
-    for (int i = 0;i < strlen(cmd);i++)
+    for (int i = 0; i < strlen(cmd); i++)
       cmd[i] = tolower(cmd[i]);
     printf("receive cmd: %s\n", cmd);
     Callback callback = conn_callback_ping;
-    for (int i = 0; i < cmd_count;i++) {
+    for (int i = 0; i < cmd_count; i++) {
       if (strcmp(cmd, handlers[i].cmd) == 0) {
         callback = handlers[i].callback;
         break;
@@ -47,15 +48,12 @@ void* hanldeConn(void* args) {
     callback(handle, argv_len);
     free(cmd);
   }
-clean_up:
+
   printf("clean up: %d\n", handle->socket_fd);
   conn_handle_free(handle);
   close(socket_fd);
   return NULL;
 }
-
-
-
 
 ConnHandle* conn_handle_init(int socket_fd) {
   ConnHandle* re = malloc(sizeof(*re));
@@ -74,12 +72,13 @@ void conn_handle_free(ConnHandle* self) {
 }
 
 char* conn_read_token(ConnHandle* self) {
-  char* re; int re_len;
+  char* re;
+  int re_len;
   int re_i = -1;
   while (1) {
     if (self->tmp != NULL) {
       printf("existing buf: %d - %d - %s\n", self->i, self->size, self->tmp);
-      for (int i = self->i; i < self->size - 1;i++) {
+      for (int i = self->i; i < self->size - 1; i++) {
         if (self->tmp[i] == '\r' && self->tmp[i + 1] == '\n') {
           re_i = i;
           goto found_token;
@@ -98,7 +97,6 @@ char* conn_read_token(ConnHandle* self) {
       printf("Accept failed: %s\n", strerror(errno));
       return NULL;
     }
-
 
     int len = strlen(self->buf);
     printf("read %d bytes - data = %s\n", len, self->buf);
@@ -126,10 +124,6 @@ found_token:
   return re;
 }
 
-
-
-
-
 int conn_read_int(ConnHandle* self, char leadingCh) {
   char* t1 = conn_read_token(self);
   if (t1 == NULL)
@@ -151,12 +145,17 @@ void conn_write_bulk_str(ConnHandle* self, char* in, int size) {
   int re = send(self->socket_fd, "$", 1, 0);
   assert(re != -1);
   char str[1024];
-  re = sprintf(str, "%d", size); assert(re != -1);
-  re = send(self->socket_fd, str, strlen(str), 0); assert(re != -1);
-  re = send(self->socket_fd, "\r\n", 2, 0); assert(re != -1);
+  re = sprintf(str, "%d", size);
+  assert(re != -1);
+  re = send(self->socket_fd, str, strlen(str), 0);
+  assert(re != -1);
+  re = send(self->socket_fd, "\r\n", 2, 0);
+  assert(re != -1);
 
-  re = send(self->socket_fd, in, size, 0);assert(re != -1);
-  re = send(self->socket_fd, "\r\n", 2, 0); assert(re != -1);
+  re = send(self->socket_fd, in, size, 0);
+  assert(re != -1);
+  re = send(self->socket_fd, "\r\n", 2, 0);
+  assert(re != -1);
 }
 
 void conn_callback_ping(ConnHandle* self, int size) {
