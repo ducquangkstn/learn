@@ -64,11 +64,9 @@ int main() {
       printf("Accept failed: %s \n", strerror(errno));
       exit(EXIT_FAILURE);
     }
-    printf("Client connected 1: %d\n", new_socket);
 
     pthread_t thread1;
     pthread_create(&thread1, NULL, handleConn, (void *)&new_socket);
-
     pthread_detach(thread1);
   }
   close(server_fd);
