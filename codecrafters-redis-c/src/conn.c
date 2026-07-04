@@ -5,9 +5,13 @@
   allocating once, and re-read into the buffer.
   - Normalize command into lower case - DONE
   - Make debug log in different levels.
+  - Make utils function for response with simple string.
+  - Add mutex.
 */
 
 #include "conn.h"
+#include "htable.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -19,11 +23,14 @@
 CmdHandler handlers[] = {
     {.cmd = "ping", .callback = conn_callback_ping},
     {.cmd = "echo", .callback = conn_callback_echo},
+    {.cmd = "set", .callback = conncb_set},
+    {.cmd = "get", .callback = conncb_get},
 };
 
 void *handleConn(void *args) {
-  int socket_fd = *((int *)args);
-  ConnHandle *handle = conn_handle_init(socket_fd);
+  int socket_fd = ((ConnArgs *)args)->socketfd;
+  Manager *manager = ((ConnArgs *)args)->manager;
+  ConnHandle *handle = conn_handle_init(socket_fd, manager);
   size_t cmd_count = sizeof(handlers) / sizeof(CmdHandler);
 
   while (1) {
@@ -48,17 +55,19 @@ void *handleConn(void *args) {
     free(cmd);
   }
 
-  printf("clean up: %d\n", handle->socket_fd);
   conn_handle_free(handle);
   close(socket_fd);
+  free(args);
+  printf("clean up: %d\n", handle->socket_fd);
   return NULL;
 }
 
-ConnHandle *conn_handle_init(int socket_fd) {
+ConnHandle *conn_handle_init(int socket_fd, Manager *manager) {
   ConnHandle *re = malloc(sizeof(*re));
   assert(re);
   memset(re, 0, sizeof(*re));
   re->socket_fd = socket_fd;
+  re->manager = manager;
 
   printf("Client connected: fd=%d\n", socket_fd);
   return re;
@@ -173,4 +182,33 @@ void conn_callback_echo(ConnHandle *self, int size) {
   conn_write_bulk_str(self, msg, strlen(msg));
 
   free(msg);
+}
+
+void conncb_set(ConnHandle *self, int size) {
+  char *key = conn_read_bulk_str(self);
+  char *value = conn_read_bulk_str(self);
+
+  map_insert(self->manager->map, key, value);
+
+  char *hello = "+OK\r\n";
+  int re = send(self->socket_fd, hello, strlen(hello), 0);
+  assert(re != -1);
+}
+
+void conncb_get(ConnHandle *self, int size) {
+  assert(size == 2);
+
+  char *key = conn_read_bulk_str(self);
+
+  char *value = map_get(self->manager->map, key);
+  if (value == NULL) {
+    char *hello = "$-1\r\n";
+    int re = send(self->socket_fd, hello, strlen(hello), 0);
+    assert(re != -1);
+    return;
+  }
+
+  conn_write_bulk_str(self, value, strlen(value));
+  free(key);
+  free(value);
 }

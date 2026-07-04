@@ -1,4 +1,3 @@
-#include "conn.h"
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -8,6 +7,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "conn.h"
+#include "manager.h"
 
 int main() {
   // Disable output buffering
@@ -52,6 +54,8 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
+  Manager *manager = manager_init();
+
   printf("Waiting for a client to connect...\n");
 
   struct sockaddr_in client_addr;
@@ -65,8 +69,12 @@ int main() {
       exit(EXIT_FAILURE);
     }
 
+    ConnArgs *args = malloc(sizeof(*args));
+    args->socketfd = new_socket;
+    args->manager = manager;
+
     pthread_t thread1;
-    pthread_create(&thread1, NULL, handleConn, (void *)&new_socket);
+    pthread_create(&thread1, NULL, handleConn, (void *)args);
     pthread_detach(thread1);
   }
   close(server_fd);

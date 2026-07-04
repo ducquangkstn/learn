@@ -1,8 +1,15 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "manager.h"
+
 #ifndef CONNECTION
 #define CONNECTION
+
+typedef struct {
+  int socketfd;
+  Manager *manager;
+} ConnArgs;
 
 void *handleConn(void *args);
 
@@ -16,10 +23,11 @@ typedef struct s_conn_handle {
   int16_t size; // size of tmp
   int16_t i;    // pointer to the current position in the tmp
   int socket_fd;
-  /* data */
+
+  Manager *manager; // data storage
 } ConnHandle;
 
-ConnHandle *conn_handle_init(int socket_fd);
+ConnHandle *conn_handle_init(int socket_fd, Manager *manager);
 void conn_handle_free(ConnHandle *self);
 
 // read a token from the conneciton. Note that the redis protocol is using /r/n
@@ -32,6 +40,8 @@ void conn_write_bulk_str(ConnHandle *self, char *ch, int size);
 
 void conn_callback_ping(ConnHandle *self, int size);
 void conn_callback_echo(ConnHandle *self, int size);
+void conncb_set(ConnHandle *self, int size);
+void conncb_get(ConnHandle *self, int size);
 
 typedef void (*Callback)(ConnHandle *self, int size);
 typedef struct s_cmd_handler {
