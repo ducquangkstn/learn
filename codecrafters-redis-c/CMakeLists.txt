@@ -12,6 +12,6 @@ message("SOURCE_FILES ${SOURCE_FILES}")
 
 set(CMAKE_C_STANDARD 99) # Enable the C99 standard
 
-add_executable(redis src/main.c ${SOURCE_FILES})
-
 add_executable(htable src/htable_main.c ${SOURCE_FILES})
+
+add_executable(redis src/main.c ${SOURCE_FILES})

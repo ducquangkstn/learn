@@ -1,14 +1,16 @@
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <sys/socket.h>
 
-#include "manager.h"
+#include "storage.h"
 
 #ifndef CONNECTION
 #define CONNECTION
 
 typedef struct {
-  int socketfd;
-  Manager *manager;
+  int fd;
+  Storage *storage;
 } ConnArgs;
 
 void *handleConn(void *args);
@@ -22,12 +24,12 @@ typedef struct s_conn_handle {
   char *tmp;
   int16_t size; // size of tmp
   int16_t i;    // pointer to the current position in the tmp
-  int socket_fd;
+  int fd;       // file descriptor of the connection
 
-  Manager *manager; // data storage
+  Storage *storage; // data storage
 } ConnHandle;
 
-ConnHandle *conn_handle_init(int socket_fd, Manager *manager);
+ConnHandle *conn_handle_init(int socket_fd, Storage *storage);
 void conn_handle_free(ConnHandle *self);
 
 // read a token from the conneciton. Note that the redis protocol is using /r/n
@@ -37,9 +39,13 @@ char *conn_read_token(ConnHandle *self);
 int conn_read_int(ConnHandle *self, char leadingCh);
 char *conn_read_bulk_str(ConnHandle *self);
 void conn_write_bulk_str(ConnHandle *self, char *ch, int size);
-
-void conn_callback_ping(ConnHandle *self, int size);
-void conn_callback_echo(ConnHandle *self, int size);
+static inline void conn_respond_simple_str(ConnHandle *self, char *msg) {
+  int re = send(self->fd, msg, strlen(msg), 0);
+  assert(re != -1);
+}
+void conncb_unknown(ConnHandle *self, int size);
+void conncb_ping(ConnHandle *self, int size);
+void conncb_echo(ConnHandle *self, int size);
 void conncb_set(ConnHandle *self, int size);
 void conncb_get(ConnHandle *self, int size);
 
